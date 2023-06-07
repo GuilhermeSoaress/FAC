@@ -1,0 +1,87 @@
+.data 
+n:    .asciiz    "\n"
+        .text 
+main:
+
+multfac:
+
+li $v0, 5
+syscall
+move $a0, $v0
+li $v0, 5
+syscall
+move $a1, $v0
+
+addi $t4, $zero, 32
+
+slt $t8, $a0, $zero      #se $a0 < 0 $t8 = 1
+slt $t9, $a1, $zero      #se $a1 < 0 $t9 = 1
+
+beq $t8, $zero, verificando_a1        # se $t8 == 0
+nor $a0, $a0, $zero      #nega
+addi $a0, $a0, 1      #soma 1
+
+verificando_a1: 
+	beq $t9, $zero, p1        #se 
+	nor $a1, $a1, $zero      #nega
+	addi $a1, $a1, 1      #soma 1
+
+p1:
+	move $t0, $zero        #hi
+
+p2:
+	move $t1, $a1        #lo
+
+p3: 
+	andi $t2, $t1, 1  # 0=>0 1=>1      #pega o bit mais significativo (lo)
+	beq $t2, $zero, p4      #se o bit mais significativo == 0
+	add $t0, $t0, $a0      #soma o multiplicando
+
+p4:
+	andi $t3, $t0, 1      #pega o bit mais significativo (hi)
+	srl $t0, $t0, 1      #um shift à direita (hi)
+	srl $t1, $t1, 1      #um shift à direita (lo)
+
+ 	sll $t3, $t3, 31      #31 shifts à esquerda (hi) (filtro para passar o último bit da esquerda p/ direita)
+
+	add $t1, $t1, $t3      #passar o bit mais sig da hi => lo
+
+loop:
+        sub $t4, $t4, 1      #interação 
+        bne $t4, $zero, p3      #loop
+
+voltar:
+	beq $t8, $t9, hi	#as entradas tem o mesmo sinal?
+	nor $t1, $t1, $zero      #nega
+	addi $t1, $t1, 1      #soma 1
+
+hi:
+    beq $t8, $zero, proximo
+    nor $t0, $t0, $zero 
+proximo: 
+    beq $t9, $zero, fim     #o multiplicando é negativo? não=>fim
+    nor $t0, $t0, $zero      #nega
+    addi $t0, $t0, 1      #soma 1
+    j fim
+
+fim:
+
+mtlo $t1
+mthi $t0
+
+move $a0, $t1
+li $v0, 1   #Syscall para imprimir hi
+syscall
+li $v0, 4
+la $a0, n
+syscall
+move $a0, $t0
+li $v0, 1   #Syscall para imprimir lo
+syscall
+li $v0, 4
+la $a0, n
+syscall
+li $v0, 10
+syscall
+
+jr $ra

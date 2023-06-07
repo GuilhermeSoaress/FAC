@@ -1,0 +1,106 @@
+.data
+    nl: .asciiz "\n"
+.text
+
+main:
+
+    li $v0, 5
+    syscall
+    move $a0, $v0
+
+    li $v0, 5
+    syscall
+    move $a1, $v0
+
+
+divfac:
+
+	comp_dividendo: 
+        slt $t0, $a0, $zero
+    	bne $t0, $zero, compara2_dividendo
+
+    comp_divisor:
+    	slt $t1, $a1, $zero
+    	bne $t1, $zero, compara2_divisor
+    	j did
+
+    compara2_dividendo:
+    	nor $a0, $a0, $zero
+    	addi $a0, $a0, 1
+    	j comp_divisor
+
+    compara2_divisor:
+    	nor $a1, $a1, $zero
+    	addi $a1, $a1, 1
+    
+    did:
+        addi $t4, $zero, 32
+        move $a2, $zero
+        addi $t6, $zero, 1
+
+loop:
+        slt $t7, $a0, $zero
+        sll $a0, $a0, 1
+        sll $a2, $a2, 1
+        bne $t7, $zero, soma_1
+    	j cont
+
+    soma_1:
+        addi $a2, $a2, 1
+	
+    cont:
+        sub $a2, $a2, $a1
+        slt $t9, $a2, $zero
+        bne $t9, $zero, menor_zero
+
+    maior_zero:
+        addi $a0, $a0, 1
+        j loopc
+
+    menor_zero:
+        add $a2, $a2, $a1
+        j loopc
+    
+    loopc:
+        sub $t8, $t4, $t6
+        addi $t6, $t6, 1
+        bne $t8, $zero, loop
+        j floop
+
+    floop:
+        bne $t0, $t1, change_dividendo
+        j comp_rest
+    
+    change_dividendo:
+        nor $a0, $a0, $zero
+        addi $a0, $a0, 1
+    
+    comp_rest:
+        bne $t0, $zero, change_resto
+        j sai_divfac
+
+    change_resto:
+        nor $a2, $a2, $zero
+        addi $a2, $a2, 1
+
+    sai_divfac:
+        mtlo $a0
+        mthi $a2
+
+        li $v0, 1
+        syscall
+
+        li $v0, 4
+        la $a0, nl
+        syscall
+        
+        
+        move $a0, $a2
+        li $v0, 1
+        syscall
+
+        li $v0, 4
+        la $a0, nl
+        syscall
+
+        jr $ra
