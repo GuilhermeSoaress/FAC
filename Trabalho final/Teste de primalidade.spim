@@ -1,0 +1,68 @@
+.data
+    invalid_input: .asciiz "Entrada invalida."
+    not_prime: .asciiz "nao"
+    prime: .asciiz "sim"
+    newline: .asciiz "\n"
+
+.text
+    main:
+
+        # Ler número inteiro
+        li $v0, 5
+        syscall
+        move $t0, $v0
+
+        # Verificar se o número é válido (natural)
+        blez $t0, invalid
+        j check_prime
+
+    invalid:
+        # Imprimir "Entrada invalida."
+        li $v0, 4
+        la $a0, invalid_input
+        syscall
+        j exit
+
+    check_prime:
+        # Se o número for menor ou igual a 1, não é primo
+        ble $t0, 1, not_prime_output
+
+        # Inicializar o contador de divisores
+        li $t1, 2
+        sqrt_loop:
+            # Verificar se o contador é maior que a raiz quadrada do número
+            mul $t2, $t1, $t1
+            bgt $t2, $t0, prime_output
+
+            # Verificar se o número é divisível pelo contador
+            div $t0, $t1
+            mfhi $t2
+            beqz $t2, not_prime_output
+
+            # Incrementar o contador
+            addiu $t1, $t1, 1
+            j sqrt_loop
+
+    not_prime_output:
+        # Imprimir "nao"
+        li $v0, 4
+        la $a0, not_prime
+        syscall
+        j exit
+
+    prime_output:
+        # Imprimir "sim"
+        li $v0, 4
+        la $a0, prime
+        syscall
+        j exit
+
+    exit:
+        # Imprimir uma nova linha
+        li $v0, 4
+        la $a0, newline
+        syscall
+
+        # Finalizar programa
+        li $v0, 10
+        syscall

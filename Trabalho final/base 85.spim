@@ -1,0 +1,207 @@
+.data
+
+	newline: .asciiz "\n"
+	base85: .asciiz "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#"
+	msg: .asciiz "Entrada invalida.\n"
+	str: .space 300
+	vetor:
+		.align 2
+		.space 16
+
+.text
+main:
+
+	# Aloca 300 bytes de memória para a string str e carrega o endereço base em $a0
+	la $a0, str
+	# Carrega o tamanho da string (300) em $a1
+	la $a1, 300
+	# Carrega o valor do sistema 8 (sbrk) em $v0 para alocar memória dinamicamente
+	li $v0, 8
+	# Chama o sistema para alocar a memória
+	syscall
+
+	# Inicializa os registradores $t1, $t2, $s6 e $s7 com 0
+	add $t1, $zero, $zero
+	add $t2, $zero, $zero
+	add $s6, $zero, $zero
+	add $s7, $zero, 4
+
+	# Carrega o endereço base da string str em $a0
+	la $a0, str
+
+verifica:
+	# Carrega o byte atual da string em $t3
+	add $t3, $a0, $t1
+	lbu $t3, 0($t3)
+	# Verifica se o byte é igual a '\n' (10)
+	beq $t3, 10, pula_verifica
+
+	# Incrementa o índice $t1
+	addi $t1, $t1, 1
+	# Pula para o próximo caractere da string
+	j verifica
+
+pula_verifica:
+	# Divide o índice $t1 por 4 para obter o número de elementos no vetor
+	div $t1, $s7
+	mfhi $s6
+
+	# Verifica se o número de elementos é zero. Se for, pula para reinicia
+	beqz $s6, reinicia
+
+	# Imprime a mensagem "Entrada invalida."
+	li $v0, 4
+	la $a0, msg
+	syscall
+
+	# Encerra o programa
+	li $v0, 10
+	syscall
+
+reinicia:
+	# Carrega o endereço base da string str em $t0
+	la $t0, str
+	# Reinicia o índice $t1 e $t2 com zero
+	add $t1, $zero, $zero
+	add $t2, $zero, $zero
+
+for:
+	# Carrega o endereço base da string str em $a0
+	la $a0, str
+	# Carrega o byte atual da string em $t3
+	add $t3, $a0, $t1
+	lbu $t3, 0($t3)
+	# Verifica se o byte é igual a '\n' (10)
+	beq $t3, 10, sair
+
+	# Verifica qual operação realizar com base em $t2
+	beq $t2, 1, segundo
+	beq $t2, 2, terceiro
+	beq $t2, 3, forTH
+
+	# Desloca o byte atual para a posição correta em $t4
+	sll $t4, $t3, 24
+
+	# Incrementa o índice $t1 e $t2
+	addi $t1, $t1, 1
+	addi $t2, $t2, 1
+
+	# Pula para a próxima iteração do loop for
+	j for
+
+segundo:
+	# Desloca o byte atual para a posição correta em $t5
+	sll $t5, $t3, 16
+	# Soma $t4 e $t5 em $t4
+	addu $t4, $t4, $t5
+
+	# Incrementa o índice $t1 e $t2
+	addi $t1, $t1, 1
+	addi $t2, $t2, 1
+
+	# Pula para a próxima iteração do loop for
+	j for
+
+terceiro:
+	# Desloca o byte atual para a posição correta em $t5
+	sll $t5, $t3, 8
+	# Soma $t4 e $t5 em $t4
+	addu $t4, $t4, $t5
+
+	# Incrementa o índice $t1 e $t2
+	addi $t1, $t1, 1
+	add $t2, $t2, 1
+
+	# Pula para a próxima iteração do loop for
+	j for
+
+forTH:
+	# Soma $t4 e $t3 em $t4
+	addu $t4, $t4, $t3
+
+	# Incrementa o índice $t1 e zera $t2
+	addi $t1, $t1, 1
+	add $t2, $zero, $zero
+
+	# Chama a função inicia para converter o número em base 10 para base 85
+	jal inicia
+	# Chama a função print para imprimir o número em base 85
+	jal print
+
+	# Pula para a próxima iteração do loop for
+	j for
+
+sair:
+	# Pula para a função retorna
+	j retorna
+
+inicia:
+	# Inicializa o registrador $s0 com zero
+	add $s0, $zero, $zero
+	# Inicializa $s5 com 85, o valor da base 85
+	addi $s5, $zero, 85
+
+finicia:
+	# Verifica se o valor de $t4 é menor que 1 (final da conversão)
+	slti $s1, $t4, 1
+	beq $s1, 1, saiinicia
+
+	# Divide $t4 por 85 e armazena o iniciao em $s2
+	divu $t4, $s5
+	mfhi $s2
+
+	# Armazena o iniciao (dígito em base 85) no vetor, na posição $s0
+	sw $s2, vetor($s0)
+
+	# Incrementa o índice $s0
+	addi $s0, $s0, 4
+	# Move o quociente para $t4
+	mflo $t4
+
+	# Pula para a próxima iteração do loop finicia
+	j finicia
+
+saiinicia:
+	# Retorna para a função chamadora
+	jr $ra
+
+print:
+	# Decrementa $s0 para obter o índice correto no vetor
+	addi $s0, $s0, -4
+
+for_print:
+	# Verifica se o índice $s0 é negativo (fim da impressão)
+	slti $s1, $s0, 0
+	beq $s1, 1, sairprint
+
+	# Carrega o dígito em base 85 do vetor para $t0
+	lw $t0, vetor($s0)
+
+	# Calcula o endereço do caractere a ser impresso em base85
+	la $a2, base85
+	addu $a2, $a2, $t0
+	lbu $a0, ($a2)
+
+	# Imprime o caractere
+	li $v0, 11
+	syscall
+
+	# Decrementa o índice $s0
+	addi $s0, $s0, -4
+
+	# Pula para a próxima iteração do loop for_print
+	j for_print
+
+sairprint:
+	# Retorna para a função chamadora
+	jr $ra
+
+retorna:
+	# Imprime uma nova linha
+	li $v0, 4
+	la $a0, newline
+	syscall
+
+	# Encerra o programa
+	li $v0, 10
+	syscall
